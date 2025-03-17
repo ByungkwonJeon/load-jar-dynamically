@@ -4,6 +4,7 @@ package com.example.mainapp;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 import org.reflections.util.ConfigurationBuilder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -12,6 +13,7 @@ import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -90,18 +92,58 @@ public class ExternalJarLoader {
                         .setScanners(Scanners.TypesAnnotated)
                         .addClassLoaders(urlClassLoader));
 
+                // ✅ Register repositories
+                Set<Class<?>> repositories = componentsReflections.getTypesAnnotatedWith(org.springframework.stereotype.Repository.class);
+                repositories.forEach(repoClass -> {
+                    context.registerBean(repoClass);
+                    System.out.println("Registered repository: " + repoClass.getName());
+                });
+
+                // ✅ Register services
+                Set<Class<?>> services = componentsReflections.getTypesAnnotatedWith(org.springframework.stereotype.Service.class);
+                for (Class<?> serviceClass : services) {
+                    Constructor<?>[] constructors = serviceClass.getConstructors();
+                    for (Constructor<?> constructor : constructors) {
+                        Object[] dependencies = new Object[constructor.getParameterCount()];
+                        for (int i = 0; i < constructor.getParameterCount(); i++) {
+                            Class<?> dependencyType = constructor.getParameterTypes()[i];
+                            // ✅ Check for @Qualifier annotation
+                            Qualifier qualifier = constructor.getParameters()[i].getAnnotation(Qualifier.class);
+                            if (qualifier != null) {
+                                // ✅ If @Qualifier is present, get the bean by name
+                                String beanName = qualifier.value();
+                                dependencies[i] = context.getBean(beanName);
+                                System.out.println("Injecting @Qualifier '" + beanName + "' into " + serviceClass.getName());
+                            } else {
+                                // ✅ If no @Qualifier, get by type
+                                dependencies[i] = context.getBean(dependencyType);
+                            }
+                        }
+
+                        Object serviceInstance = constructor.newInstance(dependencies);
+                        context.registerBean(serviceClass.getSimpleName(), (Class<Object>) serviceClass, () -> serviceInstance);
+                        System.out.println("Registered service: " + serviceClass.getName());
+                    }
+                }
+
                 // Find all annotated components
                 Set<Class<?>> components = componentsReflections.getTypesAnnotatedWith(org.springframework.stereotype.Component.class);
-                components.addAll(componentsReflections.getTypesAnnotatedWith(org.springframework.stereotype.Service.class));
-                components.addAll(componentsReflections.getTypesAnnotatedWith(org.springframework.stereotype.Repository.class));
-                components.addAll(componentsReflections.getTypesAnnotatedWith(org.springframework.web.bind.annotation.RestController.class));
+                for (Class<?> componentClass : components) {
+                    Constructor<?>[] constructors = componentClass.getConstructors();
+                    for (Constructor<?> constructor : constructors) {
+                        Object[] dependencies = new Object[constructor.getParameterCount()];
+                        for (int i = 0; i < constructor.getParameterCount(); i++) {
+                            Class<?> dependencyType = constructor.getParameterTypes()[i];
+                            dependencies[i] = context.getBean(dependencyType);
+                        }
 
-                // ✅ Register each component dynamically
-                for (Class<?> clazz : components) {
-                    Object instance = clazz.getDeclaredConstructor().newInstance();
-                    context.registerBean(clazz.getSimpleName(), (Class<Object>) clazz, () -> instance);
-                    System.out.println("Registered external component: " + clazz.getSimpleName());
+                        Object serviceInstance = constructor.newInstance(dependencies);
+                        context.registerBean(componentClass.getSimpleName(), (Class<Object>) componentClass, () -> serviceInstance);
+                        System.out.println("Registered service: " + componentClass.getName());
+                    }
                 }
+
+
 
                 System.out.println("External JAR loaded and registered: " + jarFile.getAbsolutePath());
             } else {
