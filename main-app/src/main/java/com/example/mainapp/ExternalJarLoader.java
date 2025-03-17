@@ -143,7 +143,12 @@ public class ExternalJarLoader {
                     }
                 }
 
-
+                Set<Class<?>> mappers = componentsReflections.getTypesAnnotatedWith(org.mapstruct.Mapper.class);
+                for (Class<?> mapperClass : mappers) {
+                    Object mapperInstance = Mappers.getMapper(mapperClass);
+                    context.registerBean(mapperClass.getSimpleName(), (Class<Object>) mapperClass, () -> mapperInstance);
+                    System.out.println("Registered mapper: " + mapperClass.getName());
+                }
 
                 System.out.println("External JAR loaded and registered: " + jarFile.getAbsolutePath());
             } else {
