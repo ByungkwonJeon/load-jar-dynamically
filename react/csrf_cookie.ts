@@ -1,28 +1,53 @@
-import axios from 'axios';
+import axiosInstance from "./axiosInstance";
 
-// 쿠키 값을 가져오는 유틸 함수
-function getCookie(name) {
-  const matches = document.cookie.match(new RegExp(
-    '(?:^|; )' + name.replace(/([$?*|{}\[\]\\\/+^])/g, '\\$1') + '=([^;]*)'
-  ));
-  return matches ? decodeURIComponent(matches[1]) : undefined;
-}
-
-// Axios 인스턴스 생성
-const apiClient = axios.create({
-  baseURL: 'http://localhost:8080', // 서버 주소
-  withCredentials: true, // 쿠키 포함 요청
-});
-
-// 요청 인터셉터로 X-XSRF-TOKEN 추가
-apiClient.interceptors.request.use(config => {
-  const xsrfToken = getCookie('XSRF-TOKEN'); // 쿠키에서 가져오기
-  if (xsrfToken) {
-    config.headers['X-XSRF-TOKEN'] = xsrfToken; // 헤더로 추가
+// Unified Request Function
+const request = async <T>(
+  method: "get" | "post" | "put",
+  endpoint: string,
+  data?: any,
+  headers: Record<string, string> = {}
+): Promise<T> => {
+  try {
+    const response = await axiosInstance.request<T>({
+      method,
+      url: endpoint,
+      data,
+      headers,
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
   }
-  return config;
-}, error => {
-  return Promise.reject(error);
-});
+};
 
-export default apiClient;
+// Public API Methods
+export const fetchGet = <T>(endpoint: string, headers = {}) =>
+  request<T>("get", endpoint, undefined, headers);
+
+export const fetchPost = <T>(endpoint: string, data = {}, headers = {}) =>
+  request<T>("post", endpoint, data, headers);
+
+export const fetchPut = <T>(endpoint: string, data = {}, headers = {}) =>
+  request<T>("put", endpoint, data, headers);
+
+// Axios Request Interceptor for CSRF Token
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const xsrfToken: string | undefined = getCookie("XSRF-TOKEN");
+    if (xsrfToken) {
+      if (!config.headers) {
+        config.headers = {};
+      }
+      config.headers["X-XSRF-TOKEN"] = xsrfToken;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Cookie Reader
+function getCookie(name: string): string | undefined {
+  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+  return match ? decodeURIComponent(match[2]) : undefined;
+}
