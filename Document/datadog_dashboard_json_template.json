@@ -1,0 +1,122 @@
+{
+  "title": "Connect Service - RUM Monitoring",
+  "description": "Frontend Real User Monitoring (RUM) metrics for Connect Service",
+  "widgets": [
+    {
+      "definition": {
+        "title": "Page Load Time (Avg)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:rum.view.dom_complete{env:$env}",
+            "display_type": "line",
+            "name": "Avg DOM Complete Time"
+          }
+        ],
+        "yaxis": {
+          "scale": "linear",
+          "min": "auto",
+          "max": "auto"
+        }
+      }
+    },
+    {
+      "definition": {
+        "title": "Frontend Errors Count",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "count:rum.error{env:$env}",
+            "display_type": "line",
+            "name": "Error Count"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Session Count",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "count:rum.session{env:$env}",
+            "display_type": "area",
+            "name": "Sessions"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Top Slow Pages (P95 Load Time)",
+        "type": "toplist",
+        "requests": [
+          {
+            "q": "p95:rum.view.dom_complete{env:$env} by {page.url}",
+            "name": "Top Slow Pages"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "User Actions",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "count:rum.action{env:$env}",
+            "display_type": "line",
+            "name": "User Actions"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Top Errors",
+        "type": "toplist",
+        "requests": [
+          {
+            "q": "count:rum.error{env:$env} by {error.message}",
+            "name": "Top Errors"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Users by Country",
+        "type": "toplist",
+        "requests": [
+          {
+            "q": "count:rum.session{env:$env} by {geo.country}",
+            "name": "Sessions by Country"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Browser Type Distribution",
+        "type": "query_value",
+        "requests": [
+          {
+            "q": "count:rum.session{env:$env} by {browser.name}",
+            "aggregator": "sum",
+            "name": "Browser Sessions"
+          }
+        ]
+      }
+    }
+  ],
+  "layout_type": "ordered",
+  "is_read_only": false,
+  "notify_list": [],
+  "template_variables": [
+    {
+      "name": "env",
+      "prefix": "env",
+      "default": "prod"
+    }
+  ]
+}
