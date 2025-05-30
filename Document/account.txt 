@@ -1,0 +1,99 @@
+🔹 Account Balance API
+
+/paybybank/api/v1/accounts/{accountId}/balance
+
+{
+  "accountId": "acc-123",
+  "balance": {
+    "available": 1234.56,
+    "current": 1500.00,
+    "currency": "USD"
+  },
+  "asOf": "2025-05-30T10:00:00Z"
+}
+
+
+🔹 Account Transactions API
+
+/paybybank/api/v1/accounts/{accountId}/transactions?fromDate=YYYY-MM-DD&toDate=YYYY-MM-DD
+
+{
+  "accountId": "acc-123",
+  "transactions": [
+    {
+      "transactionId": "txn-001",
+      "date": "2025-05-29",
+      "description": "Coffee Shop",
+      "amount": -5.75,
+      "currency": "USD",
+      "type": "DEBIT",
+      "status": "POSTED"
+    },
+    {
+      "transactionId": "txn-002",
+      "date": "2025-05-28",
+      "description": "Payroll",
+      "amount": 2000.00,
+      "currency": "USD",
+      "type": "CREDIT",
+      "status": "POSTED"
+    }
+  ]
+}
+
+🔹 Account Details API
+
+/paybybank/api/v1/accounts/{accountId}/details
+
+{
+  "accountId": "acc-123",
+  "accountType": "Checking",
+  "accountName": "Michael's Account",
+  "status": "ACTIVE",
+  "currencyCode": "USD",
+  "segment": "PERSONAL",
+  "accountIdentifiers": [
+    {
+      "type": "USABA",
+      "value": "****5678"
+    }
+  ],
+  "financialInstitution": {
+    "name": "Chase Bank",
+    "bic": "CHASUS33",
+    "logoUrl": "https://example.com/logos/chase.png"
+  },
+  "accountHolders": [
+    {
+      "name": "Michael, Andreas",
+      "role": "PRIMARY",
+      "dateOfBirth": "1985-08-24",
+      "addresses": [
+        {
+          "type": "RESIDENTIAL",
+          "addressLines": ["123 Main St."],
+          "city": "New York",
+          "state": "NY",
+          "postalCode": "10001",
+          "country": "US"
+        }
+      ],
+      "emails": [
+        {
+          "address": "michael.andreas@example.com",
+          "type": "PRIMARY"
+        }
+      ],
+      "phoneNumbers": [
+        {
+          "number": "+1-212-555-1234",
+          "type": "MOBILE"
+        }
+      ]
+    }
+  ],
+  "lastRefreshedAt": "2025-05-30T10:00:00Z"
+}
+
+
+
