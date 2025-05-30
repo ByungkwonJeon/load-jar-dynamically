@@ -1,21 +1,22 @@
 ```mermaid
 graph TD
 
-%% Link initiation flow
-LINK_STARTED[LINK_STARTED] --> LINK_METHOD_CHOSEN[LINK_METHOD_CHOSEN]
+%% Link initiation flow (Must)
+LINK_STARTED[LINK_STARTED ✅] --> LINK_METHOD_CHOSEN[LINK_METHOD_CHOSEN ✅]
 
-%% Instant Link Flow (Tink/Finicity OpenBank)
+%% Instant Link Flow
 LINK_METHOD_CHOSEN -- Instant Link --> INSTITUTION_SELECTED[INSTITUTION_SELECTED]
-INSTITUTION_SELECTED --> OAuthConsent{OAuth Consent}
-OAuthConsent -- Success --> ACCOUNT_SELECTED[ACCOUNT_SELECTED]
-OAuthConsent -- Failure/Timeout --> CONSENT_FAILED[CONSENT_FAILED]
-ACCOUNT_SELECTED --> CONSENT_GRANTED[CONSENT_GRANTED]
+INSTITUTION_SELECTED --> FI_AUTHENTICATION{FI_AUTHENTICATION}
+FI_AUTHENTICATION -- Success --> ACCOUNT_SELECTED[ACCOUNT_SELECTED]
+FI_AUTHENTICATION -- Failure/Timeout --> CONSENT_FAILED[CONSENT_FAILED ✅]
+ACCOUNT_SELECTED --> CONSENT_GRANTED[CONSENT_GRANTED ✅]
 
 %% Manual microdeposit flow
 LINK_METHOD_CHOSEN -- Manual Link --> ACCOUNT_SUBMITTED[ACCOUNT_SUBMITTED]
-ACCOUNT_SUBMITTED --> MICRODEPOSIT_TRANSACTION{Microdeposit Transaction}
-MICRODEPOSIT_TRANSACTION -- Success --> MICRODEPOSIT_SENT[MICRODEPOSIT_SENT]
-MICRODEPOSIT_TRANSACTION -- Failure --> LINK_FAILED[LINK_FAILED]
+ACCOUNT_SUBMITTED --> ACCOUNT_VALIDATION{ACCOUNT_VALIDATION with AVS}
+ACCOUNT_VALIDATION -- Success --> CONSENT_GRANTED
+ACCOUNT_VALIDATION -- Microdeposit --> MICRODEPOSIT_SENT[MICRODEPOSIT_SENT ✅]
+ACCOUNT_VALIDATION -- Failure --> LINK_FAILED[LINK_FAILED ✅]
 MICRODEPOSIT_SENT --> MICRODEPOSIT_VERIFIED[MICRODEPOSIT_VERIFIED]
 MICRODEPOSIT_SENT --> MICRODEPOSIT_FAILED[MICRODEPOSIT_FAILED]
 MICRODEPOSIT_SENT --> MICRODEPOSIT_EXPIRED[MICRODEPOSIT_EXPIRED]
@@ -23,43 +24,42 @@ MICRODEPOSIT_VERIFIED --> CONSENT_GRANTED
 MICRODEPOSIT_FAILED --> CONSENT_FAILED
 MICRODEPOSIT_EXPIRED --> CONSENT_EXPIRED[CONSENT_EXPIRED]
 
-%% Consent events
-CONSENT_GRANTED --> LINK_COMPLETED[LINK_COMPLETED]
+%% Consent events (Must)
+CONSENT_GRANTED --> LINK_COMPLETED[LINK_COMPLETED ✅]
 CONSENT_FAILED --> LINK_FAILED
 CONSENT_EXPIRED --> LINK_FAILED
 
-%% Link abandonment
-LINK_STARTED -- User Abandoned/Early Closure --> LINK_FAILED
+%% Link abandonment (Optional)
+LINK_STARTED -- User Abandoned --> LINK_FAILED
 LINK_METHOD_CHOSEN -- User Abandoned --> LINK_FAILED
 INSTITUTION_SELECTED -- User Abandoned --> LINK_FAILED
 ACCOUNT_SELECTED -- User Abandoned --> LINK_FAILED
 ACCOUNT_SUBMITTED -- User Abandoned --> LINK_FAILED
 
-%% Consent Link URL Expired
+%% Consent URL Expired (Optional)
 LINK_STARTED -- URL Expired --> LINK_FAILED
 LINK_METHOD_CHOSEN -- URL Expired --> LINK_FAILED
 INSTITUTION_SELECTED -- URL Expired --> LINK_FAILED
 ACCOUNT_SELECTED -- URL Expired --> LINK_FAILED
 ACCOUNT_SUBMITTED -- URL Expired --> LINK_FAILED
 MICRODEPOSIT_SENT -- URL Expired --> CONSENT_EXPIRED
-OAuthConsent -- URL Expired --> CONSENT_EXPIRED
+FI_AUTHENTICATION -- URL Expired --> CONSENT_EXPIRED
 
-%% Consent revoked after completion
-CONSENT_GRANTED --> CONSENT_REVOKED[CONSENT_REVOKED]
-CONSENT_REVOKED --> ACCOUNT_INACTIVE[ACCOUNT_INACTIVE]
+%% Consent revoked after completion (Must)
+CONSENT_GRANTED --> CONSENT_REVOKED[CONSENT_REVOKED ✅]
+CONSENT_REVOKED --> ACCOUNT_INACTIVE[ACCOUNT_INACTIVE ✅]
 
-%% Account validation and balance
-LINK_COMPLETED --> ACCOUNT_CHECK_COMPLETED[ACCOUNT_CHECK_COMPLETED]
+%% Account validation and balance (Must)
+LINK_COMPLETED --> ACCOUNT_CHECK_COMPLETED[ACCOUNT_CHECK_COMPLETED ✅]
 ACCOUNT_CHECK_COMPLETED --> BALANCE_READY[BALANCE_READY]
 
-%% Transactions
+%% Transactions (Optional)
 ACCOUNT_CHECK_COMPLETED --> TRANSACTIONS_READY[TRANSACTIONS_READY]
 
-%% Payment flow
-ACCOUNT_CHECK_COMPLETED --> PAYMENT_INITIATED[PAYMENT_INITIATED]
-PAYMENT_INITIATED --> PAYMENT_COMPLETED[PAYMENT_COMPLETED]
-PAYMENT_INITIATED --> PAYMENT_FAILED[PAYMENT_FAILED]
-
+%% Payment flow (Must if payment involved)
+ACCOUNT_CHECK_COMPLETED --> PAYMENT_INITIATED[PAYMENT_INITIATED ✅]
+PAYMENT_INITIATED --> PAYMENT_COMPLETED[PAYMENT_COMPLETED ✅]
+PAYMENT_INITIATED --> PAYMENT_FAILED[PAYMENT_FAILED ✅]
 
 ```
 
@@ -69,9 +69,9 @@ PAYMENT_INITIATED --> PAYMENT_FAILED[PAYMENT_FAILED]
 | Event Name                    | Event Group  | Lifecycle Step          | When It's Sent                                                                            | Substatus                             | Description                                                                               |
 | ----------------------------- | ------------ | ----------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
 | **LINK\_STARTED**             | LINK         | Initiation              | User initiates the Pay by Bank linking process.                                           |                                       | User initiates the Pay by Bank linking process.                                           |
-| **LINK\_METHOD\_CHOSEN**      | LINK         | Method Selection        | User selects either Instant Link (OAuth) or Manual Link (Microdeposit).                   | OAuth, Microdeposit                   | User selects either Instant Link (OAuth) or Manual Link (Microdeposit).                   |
+| **LINK\_METHOD\_CHOSEN**      | LINK         | Method Selection        | User selects either Instant Link (Finicity/Tink) or Manual Link (Microdeposit).    | Instantly(Finicity/Tink), Manually(Microdeposit) | User selects either Instant Link (Finicity/Tink) or Manual Link (Microdeposit).                   |
 | **INSTITUTION\_SELECTED**     | LINK         | Institution Selection   | User selects their financial institution for linking.                                     |                                       | User selects their financial institution for linking.                                     |
-| **OAUTH\_AUTHENTICATION**     | LINK         | OAuth Authentication    | User authenticates via OAuth at their chosen financial institution.                       |                                       | User authenticates via OAuth at their chosen financial institution.                       |
+| **FI\_AUTHENTICATION**     | LINK         | OAuth Authentication    | User authenticates via OAuth at their chosen financial institution.                       |                                       | User authenticates via OAuth at their chosen financial institution.                       |
 | **ACCOUNT\_SELECTED**         | LINK         | Account Selection       | User selects the account after successful authentication.                                 |                                       | User selects the account they wish to link after successful authentication.               |
 | **ACCOUNT\_SUBMITTED**        | MANUAL\_LINK | Manual Submission       | User manually submits account details via microdeposit method.                            |                                       | User manually submits their account details for linking via microdeposit method.          |
 | **MICRODEPOSIT\_INITIATED**   | MANUAL\_LINK | Microdeposit Initiation | System initiates microdeposit transactions (2 small credits and 1 debit).                 |                                       | System initiates microdeposit transactions (2 small credits and 1 debit).                 |
@@ -149,11 +149,11 @@ Each webhook event includes additional fields in the `data` block depending on i
 - `verificationStatus`: Possible values:  
   `"VERIFIED"`, `"PARTIALLY_VERIFIED"`, `"INSUFFICIENT_DATA"`, `"FAILED"`
 - `accounts`: Array of detailed account information, including:
-    - `accountId`, `accountType`, `accountIdentifiers`, `parties`, `status`, `financialInstitutionName`, `financialInstitutionLogo`
+  - `accountId`, `accountType`, `accountIdentifiers`, `parties`, `status`, `financialInstitutionName`, `financialInstitutionLogo`
 
 **BALANCE_READY**
 - `accounts`: Array of accounts with available balances, including:
-    - `accountId`, `availableBalance`, `currency`
+  - `accountId`, `availableBalance`, `currency`
 
 #### PAYMENT Events
 
