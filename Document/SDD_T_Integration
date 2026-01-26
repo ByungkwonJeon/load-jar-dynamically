@@ -1,0 +1,220 @@
+
+h1. Global PIS / Pay by Bank
+h2. System Design Document (SDD)
+
+⸻
+
+h2. 1. Executive Summary
+
+h3. 1.1 Objective
+
+The objective of this initiative is to migrate JPM’s Pay by Bank / Payment Initiation Services (PIS) platform from a custom, single-tenant Tink deployment (Jersey) to Tink’s standard multi-tenant environment (Oxford).
+
+This migration is driven by:
+	•	Reduction of vendor cost and bespoke customisations
+	•	Adoption of native Tink APIs only
+	•	Clear separation of responsibilities between JPM and Tink
+	•	Long-term platform scalability and vendor independence
+
+This effort is not a net-new PIS build, but a controlled unpicking and replacement of legacy vendor-specific functionality.
+
+⸻
+
+h3. 1.2 Key Outcomes
+	•	Eliminate JPM-specific Tink custom components
+	•	JPM owns settlement, reconciliation, refunds, UI, and orchestration
+	•	Tink limited to bank connectivity and payment initiation
+	•	Stable client-facing APIs with no breaking changes
+	•	Clear contract and cost boundaries for vendor negotiation
+
+⸻
+
+h2. 2. Scope
+
+h3. 2.1 In Scope
+	•	Migration to Tink multi-tenant (Oxford)
+	•	PISP V2 APIs only
+	•	Native Tink PIS and AIS APIs
+	•	JPM-owned:
+	•	Payment orchestration (Kratos)
+	•	Settlement and reconciliation
+	•	Closed-loop refunds
+	•	Client-facing UI and redirects
+	•	Webhooks and reporting
+	•	Migration activities:
+	•	V1 → V2 PIS
+	•	Jersey → Oxford
+	•	MSFT AIS and Global AIS
+
+⸻
+
+h3. 2.2 Out of Scope
+	•	SDK integrations
+	•	Auto-refund logic
+	•	New V1 functionality
+	•	Material changes to existing client-facing APIs
+
+⸻
+
+h2. 3. Architecture Overview
+
+h3. 3.1 High-Level Architecture
+
+Client / Merchant
+      |
+      v
+JPM Global PIS APIs
+      |
+      v
+Kratos (JPM Platform)
+  - PISP V2 APIs
+  - Orchestration
+  - Redirect & UI control
+  - Status & Webhooks
+  - Settlement & Refund logic
+      |
+      v
+Tink (Oxford – Multi-Tenant)
+  - Native PIS
+  - Native AIS
+  - Bank connectivity
+      |
+      v
+Consumer Banks
+
+
+h3. 3.2 Design Principles
+	•	Native-first: Use vendor standard APIs only
+	•	JPM owns money movement truth
+	•	Composable architecture: Vendor replaceable
+	•	Cost transparency: Clear ownership boundaries
+
+⸻
+
+h2. 4. Functional Design
+
+h3. 4.1 Payment Initiation (PIS)
+	•	Clients call JPM Global PIS APIs
+	•	Kratos creates a payment using Tink native PIS APIs
+	•	Tink handles:
+	•	Bank discovery
+	•	PSU authentication (SCA)
+	•	Payment execution
+	•	Tink returns payment status SENT
+
+Ownership:
+	•	Tink – payment initiation
+	•	JPM – lifecycle management and abstraction
+
+⸻
+
+h3. 4.2 Settlement & Reconciliation
+	•	Settlement is not determined by Tink
+	•	Kratos queries JPM Treasury Transaction Details APIs
+	•	Settlement confirmed when funds arrive in JPM account
+	•	Status transitions:
+	•	CREATED → SENT → SETTLED / FAILED
+
+Ownership:
+	•	JPM Treasury – settlement truth
+	•	Kratos – reconciliation logic
+
+⸻
+
+h3. 4.3 Payment Status & Events
+	•	Tink webhooks notify payment initiation outcomes
+	•	Treasury events confirm settlement
+	•	Kratos exposes:
+	•	GET /payment/{id}
+	•	Client webhooks
+
+JPM is the system of record for payment status.
+
+⸻
+
+h3. 4.4 Refunds (Closed-Loop)
+	•	Refund requests initiated via JPM APIs
+	•	Kratos validates original PIS payment
+	•	Refunds executed via JPM Treasury rails
+	•	Supports:
+	•	Full refunds
+	•	Partial refunds
+
+Auto-refunds are out of scope.
+
+⸻
+
+h3. 4.5 UI, Consent & Redirects
+	•	JPM hosts:
+	•	Consent screens
+	•	Terms & Conditions
+	•	Success / Failure pages
+	•	TinkLink used only for bank redirection and SCA
+	•	Kratos controls dynamic redirect URLs
+
+⸻
+
+h2. 5. Analytics, Reporting & Billing
+	•	Kratos emits:
+	•	API usage metrics
+	•	Payment success / failure rates
+	•	Settlement latency
+	•	Billing triggered on:
+	•	Successful payment initiation
+	•	Refund initiation
+	•	Regulatory reporting (PSD2) handled via JPM pipelines
+
+⸻
+
+h2. 6. Migration Strategy
+
+h3. 6.1 Phase 1 – Foundation
+	•	Enable Tink Oxford multi-tenant
+	•	Implement PISP V2
+	•	Treasury-based settlement confirmation
+	•	Begin V1 client migration
+
+⸻
+
+h3. 6.2 Phase 2 – De-customisation
+	•	Decommission Jersey single-tenant
+	•	Remove bespoke Tink components
+	•	Migrate AIS dependencies
+
+⸻
+
+h3. 6.3 Phase 3 – Optimisation
+	•	Improve reporting and analytics
+	•	UX improvements
+	•	Prepare for VRP / sVRP expansion
+
+⸻
+
+h2. 7. Non-Functional Requirements
+
+|| Category || Requirement ||
+| Availability | ≥ 99.9% |
+| Scalability | Multi-tenant capable |
+| Security | JPM internal approvals |
+| Performance | Defined API & UI SLAs |
+| Observability | End-to-end auditability |
+
+⸻
+
+h2. 8. Risks & Mitigations
+
+|| Risk || Mitigation ||
+| Hidden vendor customisations | Incremental unpicking & mapping |
+| Migration complexity | Phased rollout |
+| Data gaps during transition | Dual-run validation |
+| Vendor dependency | Native-only enforcement |
+
+⸻
+
+h2. 9. Summary
+
+This SDD defines a product-aligned, cost-efficient, and scalable Global PIS architecture that:
+	•	Reduces vendor dependency
+	•	Clarifies JPM vs Tink responsibilities
+	•	Enables confident contract renegotiation
+	•	Positions the platform for future growth
