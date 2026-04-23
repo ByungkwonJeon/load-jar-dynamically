@@ -1,0 +1,12 @@
+<!-- Keep enum properties as String, don't generate enum types -->
+<typeMappings>
+    <typeMapping>OrderStatus=String</typeMapping>
+    <typeMapping>PriorityLevel=String</typeMapping>
+</typeMappings>
+
+        <!-- Import your custom annotation -->
+<importMappings>
+<importMapping>ValidEnum=com.example.validation.ValidEnum</importMapping>
+<importMapping>OrderStatus=com.example.enums.OrderStatus</importMapping>
+<importMapping>PriorityLevel=com.example.enums.PriorityLevel</importMapping>
+</importMappings>
